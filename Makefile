@@ -1,4 +1,4 @@
-all: BootLoader Disk.img
+all: BootLoader Kernel32 Disk.img
 
 BootLoader:
 	@echo
@@ -13,14 +13,27 @@ BootLoader:
 	@echo ================Build Complete===============
 	@echo
 
-Disk.img: 00.BootLoader/BootLoader.bin
+Kernel32:
+	@echo
+	@echo ================Build 32bit Kernel===============
+	@echo
+	
+	
+	make -C 01.Kernel32
+	
+	
+	@echo
+	@echo ================Build Complete===============
+	@echo
+
+Disk.img: 00.BootLoader/BootLoader.bin 01.Kernel32/Kernel32.bin
 	@echo
 	@echo ================Disk Image Build Start===============
 	@echo
 	
 	
-	cp 00.BootLoader/BootLoader.bin Disk.img
-	cp Disk.img ../shared/Disk.img
+	./ImageMaker $^
+	cp Disk.img ../MINT64-shared/Disk.img
 	
 	
 	@echo
@@ -29,4 +42,5 @@ Disk.img: 00.BootLoader/BootLoader.bin
 
 clean:
 	make -C 00.BootLoader clean
-	rm -f Disk.img
+	make -C 01.Kernel32 clean
+	rm -f Disk.img ../MINT64-shared/Disk.img
