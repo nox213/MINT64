@@ -43,7 +43,7 @@ START:
 
 	; 커널 코드 세그먼트를 0x00을 기준으로 하는 것으로 교체하고 EIP의 값을 0x00 기준으로 재설정
 	; CS 세그먼트 셀렉터 : EIP
-	jmp dword 0x08 : (PROTECTEDMODE - $$ + 0x10000)
+	jmp dword 0x18 : (PROTECTEDMODE - $$ + 0x10000)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -52,7 +52,7 @@ START:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 [BITS 32]
 PROTECTEDMODE:
-	mov ax, 0x10
+	mov ax, 0x20
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
@@ -70,7 +70,7 @@ PROTECTEDMODE:
 	call PRINTMESSAGE
 	add esp, 12
 
-	jmp dword 0x08 : 0x10200
+	jmp dword 0x18 : 0x10200
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 함수 코드 영역
@@ -139,6 +139,22 @@ GDT:
 		db 0x00
 		db 0x00
 		db 0x00
+
+	IA_32eCODEDESCRIPTOR:
+		dw 0xFFFF	; Limit [15 : 0]
+		dw 0x0000	; Base [15 : 0]
+		db 0x00		; Base [23 : 16] 
+		db 0x9A		; P = 1, DPL = 0, Code Segment, Execute/Read
+		db 0xAF		; G = 1, D = 0, L = 1, Limit[19 : 16]
+		db 0x00		; Base [31 : 24]
+
+	IA_32eDATAEDESCRIPTOR:
+		dw 0xFFFF	; Limit [15 : 0]
+		dw 0x0000	; Base [15 : 0]
+		db 0x00		; Base [23 : 16] 
+		db 0x92		; P = 1, DPL = 0, Data Segment, Read/Write
+		db 0xAF		; G = 1, D = 0, L = 1, Limit[19 : 16]
+		db 0x00		; Base [31 : 24]
 
 	CODEDESCRIPTOR:
 		dw 0xFFFF

@@ -9,7 +9,7 @@
 #define BYTE_PER_SECTOR 512
 
 int adjust_in_sector_size(int fd, int source_size);
-void write_kernel_information(int target_fd, int kernel_sector_count);
+void write_kernel_information(int target_fd, int total_kernel_sector_count, int kernel32_sector_count);
 int copy_file(int source_fd, int target_fd);
 
 int main(int argc, char *argv[])
@@ -18,10 +18,11 @@ int main(int argc, char *argv[])
 	int target_fd;
 	int boot_loader_size;
 	int kernel32_sector_count;
+	int kernel64_sector_count;
 	int source_size;
 
-	if (argc < 3) {
-		fprintf(stderr, "[ERROR] ImageMaker BootLoader.bin kernel32.bin\n");
+	if (argc < 4) {
+		fprintf(stderr, "[ERROR] ImageMaker BootLoader.bin kernel32.bin kernel64.bin\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -57,8 +58,23 @@ int main(int argc, char *argv[])
 	kernel32_sector_count = adjust_in_sector_size(target_fd, source_size);
 	printf("[INFO] %s size = [%d] and sector count = [%d]\n", argv[2], source_size, kernel32_sector_count);
 
+	/* copy 64bit kernel */
+	printf("[INFO] Copy IA-32e mode kernel to image file\n");
+	if ((source_fd = open(argv[3], O_RDONLY)) == -1) {
+		fprintf(stderr, "[ERROR] %s open fail.\n", argv[3]);
+		exit(EXIT_FAILURE);
+	}
+
+	source_size = copy_file(source_fd, target_fd);
+	close(source_fd);
+	
+	/* adjust kernel size */
+	kernel64_sector_count = adjust_in_sector_size(target_fd, source_size);
+	printf("[INFO] %s size = [%d] and sector count = [%d]\n", argv[3], source_size, kernel64_sector_count);
+
+	/* change sector count of bootloader */
 	printf("[INFO] Start to write kernel information\n");
-	write_kernel_information(target_fd, kernel32_sector_count);
+	write_kernel_information(target_fd, kernel32_sector_count + kernel64_sector_count, kernel32_sector_count);
 	printf("[INFO] Image file create complete\n");
 
 	close(target_fd);
@@ -92,7 +108,7 @@ int adjust_in_sector_size(int fd, int source_size)
 	return sector_count;
 }
 
-void write_kernel_information(int target_fd, int kernel_sector_count)
+void write_kernel_information(int target_fd, int total_kernel_sector_count, int kernel32_sector_count)
 {
 	unsigned short data;
 	long position;
@@ -102,10 +118,13 @@ void write_kernel_information(int target_fd, int kernel_sector_count)
 		exit(EXIT_FAILURE);
 	}
 
-	data = (unsigned short) kernel_sector_count;
+	data = (unsigned short) total_kernel_sector_count;
+	write(target_fd, &data, 2);
+	data = (unsigned short) kernel32_sector_count;
 	write(target_fd, &data, 2);
 
-	printf("[INFO] Total sector count except boot loader [%d]\n", kernel_sector_count);
+	printf("[INFO] Total sector count except boot loader [%d]\n", total_kernel_sector_count);
+	printf("[INFO] Total sector count of protected mode kernel [%d]\n", kernel32_sector_count);
 }
 
 int copy_file(int source_fd, int target_fd)
